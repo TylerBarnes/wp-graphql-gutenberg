@@ -41,7 +41,8 @@ class BlockEditorPreview
     public static function ensure_current_user_can_read($callback)
     {
         return function ($source, $args, $context, $info) use ($callback) {
-            if (!apply_filters('graphql_gutenberg_user_can_read_block_editor_previews', current_user_can('edit_others_posts'))) {
+            $cap = get_post_type_object(WP_GRAPHQL_GUTENBERG_PREVIEW_POST_TYPE_NAME)->cap->edit_others_posts;
+            if (!apply_filters('graphql_gutenberg_user_can_read_block_editor_preview_field_' . $info->fieldName, current_user_can($cap))) {
                 return null;
             }
 
@@ -175,6 +176,9 @@ class BlockEditorPreview
         add_action('init', function () {
             register_post_type(WP_GRAPHQL_GUTENBERG_PREVIEW_POST_TYPE_NAME, array(
                 'public' => true,
+                'labels' => [
+                    'name' => __('Previews', 'wp-graphql-gutenberg')
+                ],
                 'show_in_rest' => true,
                 'rest_base' => 'wp-graphql-gutenberg-previews',
                 'show_ui' => true,

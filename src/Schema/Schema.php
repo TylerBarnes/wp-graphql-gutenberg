@@ -6,13 +6,17 @@ use WPGraphQLGutenberg\Blocks\PostMeta;
 use WPGraphQLGutenberg\Blocks\Registry;
 use WPGraphQLGutenberg\PostTypes\BlockEditorPreview;
 use WPGraphQLGutenberg\Schema\Utils;
+use WPGraphQLGutenberg\Server\Server;
 
 class Schema
 {
     private $type_registry;
+    private $server;
 
     function __construct()
     {
+
+        $this->server = new Server();
 
         add_filter(
             'register_post_type_args',
@@ -33,7 +37,7 @@ class Schema
             return array_merge($fields, [
                 'previewBlocksFrom' => [
                     'type' => [
-                        'list_of' => 'Block'
+                        'list_of' => ['non_null' => 'Block']
                     ],
                     'args' => [
                         'databaseId' => [
@@ -41,7 +45,7 @@ class Schema
                         ]
                     ],
                     'description' => 'Gutenberg blocks as previewed',
-                    'resolve' => BlockEditorPreview::ensure_current_user_can_read(function ($model, $args) {
+                    'resolve' => function ($model, $args) {
                         $id = BlockEditorPreview::get_preview_id($model->ID, $args['databaseId']);
 
                         if (!empty($id)) {
@@ -49,7 +53,7 @@ class Schema
                         }
 
                         return null;
-                    })
+                    }
                 ],
                 'previewBlocksJSONFrom' => [
                     'type' => 'String',
@@ -59,7 +63,7 @@ class Schema
                             'type' => ['non_null' => 'Int']
                         ]
                     ],
-                    'resolve' => BlockEditorPreview::ensure_current_user_can_read(function ($model, $args) {
+                    'resolve' => function ($model, $args) {
                         $id = BlockEditorPreview::get_preview_id($model->ID, $args['databaseId']);
 
                         if (!empty($id)) {
@@ -67,9 +71,30 @@ class Schema
                         }
 
                         return null;
-                    })
+                    }
                 ]
             ]);
+        });
+
+        add_filter('graphql_wp_interface_type_config', function (
+            $config
+        ) {
+
+
+            if (
+                $config['name'] === 'BlockEditorContentNode'
+            ) {
+
+                $fields_cb = $config['fields'];
+
+                $config['fields'] = function () use (
+                    $fields_cb
+                ) {
+                    $fields = $fields_cb();
+                    return $fields;
+                };
+            }
+            return $config;
         });
 
         add_filter('graphql_wp_object_type_config', function (
@@ -126,8 +151,38 @@ class Schema
                 \WPGraphQLGutenberg\Schema\Types\InterfaceType\Block::register_type($type_registry);
                 \WPGraphQLGutenberg\Schema\Types\InterfaceType\BlockEditorContentNode::register_type($type_registry);
                 \WPGraphQLGutenberg\Schema\Types\Connection\BlockEditorContentNodeConnection::register_type($type_registry);
-                \WPGraphQLGutenberg\Schema\Types\BlockTypes::register_block_types(Registry::get_registry(), $type_registry);
+                \WPGraphQLGutenberg\Schema\Types\BlockTypes::register_block_types($type_registry, Registry::get_registry(), $this->server);
             }
         );
+
+        add_filter(
+            'graphql_schema_config',
+            function ($config) {
+                $types = [
+                    $this->type_registry->get_type(
+                        'Block'
+                    ),
+                    $this->type_registry->get_type(
+                        'BlockEditorContentNode'
+                    )
+                ];
+
+                $config['types'] = array_merge(
+                    $config['types'] ?? [],
+                    $types
+                );
+                return $config;
+            }
+        );
+
+        add_filter('graphql_app_context_config', function ($config) {
+            $new_config = $config ?? [];
+
+            $new_config['gutenberg'] = [
+                'server' => $this->server
+            ];
+
+            return $new_config;
+        });
     }
 }

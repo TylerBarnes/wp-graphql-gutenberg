@@ -192,7 +192,7 @@ class BlockTypes
         return $name;
     }
 
-    public static function register_block_types($registry, $type_registry)
+    public static function register_block_types($type_registry, $registry)
     {
 
         add_filter('graphql_CoreBlock_fields', function ($fields) {
@@ -221,6 +221,9 @@ class BlockTypes
                 $types = [
                     $type_registry->get_type(
                         'Block'
+                    ),
+                    $type_registry->get_type(
+                        'BlockEditorContentNode'
                     )
                 ];
 
@@ -234,8 +237,7 @@ class BlockTypes
                     $types
                 );
                 return $config;
-            },
-            10
+            }
         );
     }
 }

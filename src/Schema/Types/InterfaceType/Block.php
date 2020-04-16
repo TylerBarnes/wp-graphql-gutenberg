@@ -58,7 +58,7 @@ class Block
                     'innerBlocks' => [
                         'type' => [
                             'non_null' => [
-                                'list_of' => 'Block'
+                                'list_of' => ['non_null' => 'Block']
                             ]
                         ],
                         'description' => __(

@@ -44,7 +44,7 @@ class BlockEditorContentNode
             'fields' => [
                 'blocks' => [
                     'type' => [
-                        'list_of' => 'Block'
+                        'list_of' => ['non_null' => 'Block']
                     ],
                     'description' => 'Gutenberg blocks',
                     'resolve' => function ($model) {
@@ -65,10 +65,13 @@ class BlockEditorContentNode
                 ],
                 'previewBlocks' => [
                     'type' => [
-                        'list_of' => 'Block'
+                        'list_of' => ['non_null' => 'Block']
                     ],
                     'description' => 'Gutenberg blocks as previewed',
-                    'resolve' => BlockEditorPreview::ensure_current_user_can_read(function ($model) {
+                    'resolve' => function ($model, $args, $context, $info) {
+
+                        $a = $context->config['gutenberg']['server']->gutenberg_fields_in_query();
+
                         $id = BlockEditorPreview::get_preview_id($model->ID, $model->ID);
 
                         if (!empty($id)) {
@@ -76,12 +79,12 @@ class BlockEditorContentNode
                         }
 
                         return null;
-                    })
+                    }
                 ],
                 'previewBlocksJSON' => [
                     'type' => 'String',
                     'description' => 'Gutenberg blocks as previewed as json string',
-                    'resolve' => BlockEditorPreview::ensure_current_user_can_read(function ($model) {
+                    'resolve' => function ($model) {
                         $id = BlockEditorPreview::get_preview_id($model->ID, $model->ID);
 
                         if (!empty($id)) {
@@ -89,7 +92,7 @@ class BlockEditorContentNode
                         }
 
                         return null;
-                    })
+                    }
                 ]
             ],
             'resolveType' => function ($model) use ($type_registry) {
